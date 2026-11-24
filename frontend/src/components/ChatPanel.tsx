@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import type { Source } from "../api";
 import type { ChatEntry } from "../hooks/useStudyCompanion";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type ChatPanelProps = {
   readyDocuments: number;
@@ -108,7 +110,11 @@ export function ChatPanel(props: ChatPanelProps) {
                   <div className="message-author">
                     {entry.role === "assistant" ? "Study tutor" : "You"}
                   </div>
-                  <p>{entry.text}</p>
+                  <div className="markdown-content">
+                    <Markdown remarkPlugins={[remarkGfm]} skipHtml>
+                      {entry.text}
+                    </Markdown>
+                  </div>
                   {!!entry.sources?.length && (
                     <div className="source-list">
                       <div className="source-caption">
