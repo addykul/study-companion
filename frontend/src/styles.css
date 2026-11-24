@@ -24,6 +24,9 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .58; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #9bb8a6; outline-offset: 2px; }
 .app-shell { min-height: 100vh; display: flex; }
+.fatal-error { min-height: 100vh; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #6b514a; text-align: center; }
+.fatal-error h1 { margin: 4px 0 0; color: #39443c; font: 700 24px Manrope, sans-serif; }
+.fatal-error p { margin: 0 0 8px; color: #66736a; font-size: 14px; }
 
 /* Left navigation */
 .sidebar { width: 250px; min-width: 250px; min-height: 100vh; padding: 26px 16px 18px; background: #fbfcfa; border-right: 1px solid #e8ebe7; display: flex; flex-direction: column; }
