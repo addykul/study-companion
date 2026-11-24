@@ -3,7 +3,9 @@ package dev.studycompanion.application.service;
 import dev.studycompanion.application.port.StudyAiProvider;
 import dev.studycompanion.application.exception.AppException;
 import dev.studycompanion.domain.model.ChatAnswer;
-import dev.studycompanion.domain.model.ConversationMessage;
+import dev.studycompanion.domain.model.ConversationHistory;
+import dev.studycompanion.domain.model.ConversationSource;
+import dev.studycompanion.domain.model.ConversationTurn;
 import dev.studycompanion.domain.model.RetrievedChunk;
 import dev.studycompanion.domain.repository.ConversationRepository;
 import java.util.List;
@@ -48,8 +50,16 @@ public class ChatService {
 
         List<RetrievedChunk> sources = retrievalService.retrieve(courseId, question);
         String answer = sources.isEmpty() ? NO_SUPPORT_ANSWER : generateGroundedAnswer(conversationId, question, sources);
-        conversationRepository.addExchange(conversationId, question, answer);
+        conversationRepository.addExchange(conversationId, question, answer, sources.stream()
+                .map(source -> new ConversationSource(source.documentId(), source.documentName(),
+                        source.page(), source.content()))
+                .toList());
         return new ChatAnswer(conversationId, answer, sources);
+    }
+
+    public ConversationHistory history(UUID courseId) {
+        courseService.get(courseId);
+        return conversationRepository.findLatestForCourse(courseId);
     }
 
     private String generateGroundedAnswer(UUID conversationId, String question, List<RetrievedChunk> sources) {
@@ -69,7 +79,7 @@ public class ChatService {
         return StringUtils.hasText(answer) ? answer : "I couldn't produce an answer from the available course material.";
     }
 
-    private static String formatMessage(ConversationMessage message) {
+    private static String formatMessage(ConversationTurn message) {
         return message.role() + ": " + message.content();
     }
 }

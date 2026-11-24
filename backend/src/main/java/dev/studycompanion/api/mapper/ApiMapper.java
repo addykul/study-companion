@@ -1,6 +1,8 @@
 package dev.studycompanion.api.mapper;
 
 import dev.studycompanion.api.dto.response.ChatResponse;
+import dev.studycompanion.api.dto.response.ChatHistoryResponse;
+import dev.studycompanion.api.dto.response.ChatMessageResponse;
 import dev.studycompanion.api.dto.response.CourseResponse;
 import dev.studycompanion.api.dto.response.DocumentResponse;
 import dev.studycompanion.api.dto.response.ProgressResponse;
@@ -11,12 +13,14 @@ import dev.studycompanion.api.dto.response.QuizSubmissionResponse;
 import dev.studycompanion.api.dto.response.SourceReference;
 import dev.studycompanion.api.dto.response.TopicProgressResponse;
 import dev.studycompanion.domain.model.ChatAnswer;
+import dev.studycompanion.domain.model.ConversationHistory;
 import dev.studycompanion.domain.model.Course;
 import dev.studycompanion.domain.model.CourseProgress;
 import dev.studycompanion.domain.model.StudyDocument;
 import dev.studycompanion.domain.model.Quiz;
 import dev.studycompanion.domain.model.QuizSubmissionResult;
 import java.util.List;
+import java.util.Locale;
 
 public final class ApiMapper {
     private ApiMapper() {}
@@ -37,6 +41,17 @@ public final class ApiMapper {
                         source.page(), source.content()))
                 .toList();
         return new ChatResponse(answer.conversationId(), answer.answer(), references);
+    }
+
+    public static ChatHistoryResponse toResponse(ConversationHistory history) {
+        List<ChatMessageResponse> messages = history.messages().stream()
+                .map(message -> new ChatMessageResponse(message.id(), message.role().toLowerCase(Locale.ROOT),
+                        message.content(), message.createdAt(), message.sources().stream()
+                        .map(source -> new SourceReference(source.documentId(), source.documentName(),
+                                source.page(), source.excerpt()))
+                        .toList()))
+                .toList();
+        return new ChatHistoryResponse(history.conversationId(), messages);
     }
 
     public static QuizResponse toResponse(Quiz quiz) {

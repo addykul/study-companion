@@ -6,7 +6,7 @@ import { api, type Course, type Quiz } from './api'
 
 vi.mock('./api', () => ({
   api: {
-    courses: vi.fn(), createCourse: vi.fn(), documents: vi.fn(), upload: vi.fn(), ask: vi.fn(),
+    courses: vi.fn(), createCourse: vi.fn(), documents: vi.fn(), upload: vi.fn(), ask: vi.fn(), chatHistory: vi.fn(),
     createQuiz: vi.fn(), submitQuiz: vi.fn(), progress: vi.fn(),
   },
 }))
@@ -32,6 +32,7 @@ describe('Study Companion journeys', () => {
     vi.clearAllMocks()
     vi.mocked(api.courses).mockResolvedValue([])
     vi.mocked(api.documents).mockResolvedValue([])
+    vi.mocked(api.chatHistory).mockResolvedValue({ conversationId: null, messages: [] })
     vi.mocked(api.createCourse).mockResolvedValue(course)
     vi.mocked(api.upload).mockResolvedValue({
       id: 'doc-1', courseId: course.id, fileName: 'week-1.txt', contentType: 'text/plain',

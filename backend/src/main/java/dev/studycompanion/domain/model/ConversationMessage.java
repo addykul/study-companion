@@ -1,3 +1,12 @@
 package dev.studycompanion.domain.model;
 
-public record ConversationMessage(String role, String content) {}
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+public record ConversationMessage(UUID id, String role, String content, Instant createdAt,
+                                  List<ConversationSource> sources) {
+    public ConversationMessage {
+        sources = List.copyOf(sources);
+    }
+}

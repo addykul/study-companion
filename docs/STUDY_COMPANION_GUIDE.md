@@ -69,7 +69,7 @@ Key files:
 ### Frontend state and flow
 
 1. On load, `App` calls `GET /api/courses` and selects a course.
-2. When a course is selected, it calls `GET /api/courses/{courseId}/documents` and clears course-specific view state.
+2. The selected course ID is kept in browser local storage so a refresh returns to the same course. When a course is selected, the app calls `GET /api/courses/{courseId}/documents` and `GET /api/courses/{courseId}/chat`. The latter restores the course’s saved messages and citations, and returns the latest conversation ID so new questions continue that conversation.
 3. Upload sends a browser `FormData` object to the documents endpoint. The browser sets the multipart boundary; frontend code should not hard-code a `Content-Type` header for this request.
 4. While any document is `PROCESSING`, the UI refreshes the course’s document list every **5 seconds**. It stops polling when the API returns no processing documents.
 5. Chat, quiz creation, submission, and progress each call the matching REST endpoint through `api.ts`.
@@ -137,6 +137,7 @@ There is no hand-written `DatabaseConfig` class. Spring Boot creates the connect
 | `GET /api/courses/{courseId}/documents` | List course documents and statuses |
 | `POST /api/courses/{courseId}/documents` | Upload one PDF or TXT file (`multipart/form-data`, field `file`) |
 | `GET /api/documents/{documentId}` | Read a document status |
+| `GET /api/courses/{courseId}/chat` | Load saved messages for the course and its latest conversation ID |
 | `POST /api/courses/{courseId}/chat` | Ask a course-grounded question |
 | `POST /api/courses/{courseId}/quizzes` | Generate five questions, optionally for a topic |
 | `POST /api/quizzes/{quizId}/submissions` | Submit answer indexes and get a score/results |
@@ -157,12 +158,12 @@ The batch size matters: the Java notes PDF was 3 MB but produced 298 chunks from
 
 ### Data schema
 
-The Flyway migration is [`V1__initial_schema.sql`](../backend/src/main/resources/db/migration/V1__initial_schema.sql). It creates:
+The initial Flyway migration is [`V1__initial_schema.sql`](../backend/src/main/resources/db/migration/V1__initial_schema.sql). Chat citation storage is added by [`V2__persist_chat_sources.sql`](../backend/src/main/resources/db/migration/V2__persist_chat_sources.sql). The schema includes:
 
 - `courses`: course name/description and creation time.
 - `documents`: original file metadata, storage path, status, and processing error.
 - `document_chunks`: extracted content, page, index, course/document references, and `vector(1536)` embedding.
-- `conversations` and `messages`: chat state and turns.
+- `conversations` and `messages`: chat state, turns, timestamps, and saved citation references (`sources_json`).
 - `quizzes`: quiz questions and server-side answer key as JSONB.
 - `quiz_submissions`: saved answer indexes and deterministic score.
 
@@ -319,6 +320,6 @@ This is a local portfolio demo, not a production learning platform. It has no au
 
 1. Add a controller-level integration test for upload/status behavior and a CORS preflight regression test.
 2. Add progress polling backoff or a server-sent-events status channel only if needed; current polling is simple and stops at terminal status.
-3. Improve chat history reloading and clarify whether unanswered quiz items should count as incorrect.
+3. Clarify whether unanswered quiz items should count as incorrect.
 4. Containerize backend and move uploaded files to S3 before AWS deployment.
 5. Add auth and per-user ownership before exposing the app to other people.

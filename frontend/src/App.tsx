@@ -16,7 +16,7 @@ function App() {
     loadingCourses, pageError, setPageError, showCreate, setShowCreate,
     newName, setNewName, newDescription, setNewDescription, creating,
     uploading, selectedFileName, setSelectedFileName, question, setQuestion,
-    asking, chat, activeSource, setActiveSource, topic, setTopic, quiz, answers,
+    asking, loadingChat, chat, activeSource, setActiveSource, topic, setTopic, quiz, answers,
     setAnswers, submission, creatingQuiz, submittingQuiz, quizError,
     setTab, selectCourse, handleCreateCourse, handleUpload, handleAsk,
     handleCreateQuiz, handleSubmitQuiz, resetQuiz,
@@ -57,6 +57,7 @@ function App() {
                   chat={chat}
                   question={question}
                   asking={asking}
+                  loadingChat={loadingChat}
                   activeSource={activeSource}
                   onQuestionChange={setQuestion}
                   onAsk={handleAsk}

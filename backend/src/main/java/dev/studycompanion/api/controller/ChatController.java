@@ -8,6 +8,7 @@ import dev.studycompanion.application.service.ChatService;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,11 @@ public class ChatController {
     private final ChatService chatService;
 
     public ChatController(ChatService chatService) { this.chatService = chatService; }
+
+    @GetMapping
+    public dev.studycompanion.api.dto.response.ChatHistoryResponse history(@PathVariable UUID courseId) {
+        return ApiMapper.toResponse(chatService.history(courseId));
+    }
 
     @PostMapping
     public ChatResponse ask(@PathVariable UUID courseId, @RequestBody ChatRequest request) {

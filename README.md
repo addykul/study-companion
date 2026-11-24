@@ -151,7 +151,7 @@ Do not commit `.env`, API keys, database credentials, or uploaded study files. T
 | `GET`, `POST` | `/api/courses` | List and create courses |
 | `GET`, `POST` | `/api/courses/{courseId}/documents` | List and upload course documents |
 | `GET` | `/api/documents/{documentId}` | Read document processing status |
-| `POST` | `/api/courses/{courseId}/chat` | Ask a cited question |
+| `GET`, `POST` | `/api/courses/{courseId}/chat` | Load saved course chat history and ask a cited question |
 | `POST` | `/api/courses/{courseId}/quizzes` | Generate a quiz |
 | `POST` | `/api/quizzes/{quizId}/submissions` | Submit answers and get results |
 | `GET` | `/api/courses/{courseId}/progress` | Read topic progress |

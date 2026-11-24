@@ -20,6 +20,7 @@ type ChatPanelProps = {
   chat: ChatEntry[];
   question: string;
   asking: boolean;
+  loadingChat: boolean;
   activeSource: Source | null;
   onQuestionChange: (value: string) => void;
   onAsk: (event: FormEvent<HTMLFormElement>) => void;
@@ -38,6 +39,7 @@ export function ChatPanel(props: ChatPanelProps) {
     chat,
     question,
     asking,
+    loadingChat,
     activeSource,
     onQuestionChange,
     onAsk,
@@ -80,7 +82,7 @@ export function ChatPanel(props: ChatPanelProps) {
         </div>
       ) : (
         <>
-          {chat.length === 0 && (
+          {chat.length === 0 && !loadingChat && (
             <div className="suggestions">
               <span className="suggestion-label">TRY ASKING</span>
               {SUGGESTED_QUESTIONS.map((suggestion) => (
@@ -101,6 +103,11 @@ export function ChatPanel(props: ChatPanelProps) {
             aria-live="polite"
             aria-relevant="additions text"
           >
+            {loadingChat && chat.length === 0 && (
+              <div className="chat-history-loading" role="status">
+                <LoaderCircle className="spin" size={16} /> Loading conversation…
+              </div>
+            )}
             {chat.map((entry) => (
               <div key={entry.id} className={`message-row ${entry.role}`}>
                 <div className={`message-avatar ${entry.role}`}>
@@ -183,11 +190,11 @@ export function ChatPanel(props: ChatPanelProps) {
               ? "Ask a question about your notes…"
               : "Upload notes to start asking"
           }
-          disabled={!readyDocuments || asking}
+          disabled={!readyDocuments || asking || loadingChat}
         />
         <button
           aria-label="Send question"
-          disabled={!question.trim() || !readyDocuments || asking}
+          disabled={!question.trim() || !readyDocuments || asking || loadingChat}
         >
           {asking ? (
             <LoaderCircle className="spin" size={17} />

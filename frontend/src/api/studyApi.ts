@@ -1,5 +1,5 @@
 import { createHttpClient } from './httpClient'
-import type { ChatResult, Course, CourseDocument, Progress, Quiz, QuizSubmission } from './types'
+import type { ChatHistory, ChatResult, Course, CourseDocument, Progress, Quiz, QuizSubmission } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 const request = createHttpClient(API_BASE_URL)
@@ -20,6 +20,7 @@ export const api = {
   ask: (courseId: string, question: string, conversationId: string | null) => request<ChatResult>(`/courses/${encodeId(courseId)}/chat`, {
     method: 'POST', headers: jsonHeaders, body: JSON.stringify({ question, conversationId }),
   }),
+  chatHistory: (courseId: string) => request<ChatHistory>(`/courses/${encodeId(courseId)}/chat`),
   createQuiz: (courseId: string, topic: string) => request<Quiz>(`/courses/${encodeId(courseId)}/quizzes`, {
     method: 'POST', headers: jsonHeaders, body: JSON.stringify({ topic: topic || null }),
   }),

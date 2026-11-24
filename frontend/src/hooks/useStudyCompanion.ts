@@ -5,6 +5,7 @@ export type StudyTab = 'learn' | 'quiz' | 'progress'
 export type ChatEntry = { id: string; role: 'user' | 'assistant'; text: string; sources?: Source[] }
 
 const DOCUMENT_POLL_INTERVAL_MS = 5_000
+const SELECTED_COURSE_STORAGE_KEY = 'study-companion:selected-course'
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -12,7 +13,8 @@ function errorMessage(error: unknown, fallback: string) {
 
 export function useStudyCompanion() {
   const [courses, setCourses] = useState<Course[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    window.localStorage.getItem(SELECTED_COURSE_STORAGE_KEY))
   const [documents, setDocuments] = useState<CourseDocument[]>([])
   const [progress, setProgress] = useState<Progress | null>(null)
   const [tab, setTab] = useState<StudyTab>('learn')
@@ -28,6 +30,7 @@ export function useStudyCompanion() {
 
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
+  const [loadingChat, setLoadingChat] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [activeSource, setActiveSource] = useState<Source | null>(null)
@@ -87,6 +90,11 @@ export function useStudyCompanion() {
   useEffect(() => { void loadCourses() }, [loadCourses])
 
   useEffect(() => {
+    if (selectedId) window.localStorage.setItem(SELECTED_COURSE_STORAGE_KEY, selectedId)
+    else window.localStorage.removeItem(SELECTED_COURSE_STORAGE_KEY)
+  }, [selectedId])
+
+  useEffect(() => {
     documentRequestRef.current += 1
     chatRequestRef.current += 1
     quizRequestRef.current += 1
@@ -99,9 +107,31 @@ export function useStudyCompanion() {
     setSubmission(null)
     setAnswers({})
     setAsking(false)
+    setLoadingChat(Boolean(selectedId))
     setCreatingQuiz(false)
     setSubmittingQuiz(false)
-    if (selectedId) void loadDocuments(selectedId)
+    if (selectedId) {
+      void loadDocuments(selectedId)
+      const requestId = chatRequestRef.current
+      api.chatHistory(selectedId).then((history) => {
+        if (chatRequestRef.current !== requestId || selectedIdRef.current !== selectedId) return
+        setConversationId(history.conversationId)
+        setChat(history.messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          text: message.content,
+          sources: message.sources,
+        })))
+      }).catch((error: unknown) => {
+        if (chatRequestRef.current === requestId && selectedIdRef.current === selectedId) {
+          setPageError(errorMessage(error, 'Could not load chat history.'))
+        }
+      }).finally(() => {
+        if (chatRequestRef.current === requestId && selectedIdRef.current === selectedId) {
+          setLoadingChat(false)
+        }
+      })
+    }
   }, [selectedId, loadDocuments])
 
   useEffect(() => {
@@ -250,7 +280,7 @@ export function useStudyCompanion() {
     loadingCourses, pageError, setPageError, showCreate, setShowCreate,
     newName, setNewName, newDescription, setNewDescription, creating,
     uploading, selectedFileName, setSelectedFileName, question, setQuestion,
-    asking, chat, activeSource, setActiveSource, topic, setTopic, quiz, answers,
+    asking, loadingChat, chat, activeSource, setActiveSource, topic, setTopic, quiz, answers,
     setAnswers, submission, creatingQuiz, submittingQuiz, quizError,
     setTab, selectCourse, handleCreateCourse, handleUpload, handleAsk,
     handleCreateQuiz, handleSubmitQuiz, resetQuiz,
