@@ -1,0 +1,31 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Local uploads and runtime data
+/data/
+/uploads/
+
+# Java / Maven output
+**/target/
+*.class
+*.jar
+*.log
+
+# Node / pnpm output
+**/node_modules/
+**/dist/
+/.pnpm-store/
+
+# IDE and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Private keys and local certificates
+*.pem
+*.key
+*.p12
+*.jks

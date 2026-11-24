@@ -1,0 +1,15 @@
+spring:
+  ai:
+    openai:
+      base-url: https://openrouter.ai/api
+      api-key: ${OPENROUTER_API_KEY:missing-openrouter-key}
+      chat:
+        completions-path: /v1/chat/completions
+        options:
+          model: ${OPENROUTER_CHAT_MODEL:openai/gpt-4o-mini}
+          temperature: 0.2
+      embedding:
+        embeddings-path: /v1/embeddings
+        options:
+          model: ${OPENROUTER_EMBEDDING_MODEL:openai/text-embedding-3-small}
+          dimensions: 1536
