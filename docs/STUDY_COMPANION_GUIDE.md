@@ -190,9 +190,9 @@ The source list tells the user which passages informed the answer. It does not p
 
 1. Retrieve course excerpts (or topic-oriented excerpts if a topic was entered).
 2. Ask the model for a structured `QuizDraft` containing exactly five questions, four choices each, a correct index, topic, and explanation.
-3. Validate the generated structure before storing it. Invalid model output is rejected rather than saved as a malformed quiz.
+3. Validate the draft structure, then make a second structured model call to review every answer independently against the retrieved excerpts. The reviewer must identify exactly one supported option, provide an exact quote found in the source context, and supply an explanation. The reviewed answer key and explanation replace the draft values; a failed review gets one regeneration attempt, and nothing is stored if the second review still fails.
 4. Return questions and options without the correct indexes.
-5. On submission, Java validates answer IDs and indexes, computes the score, and returns explanations/correct indexes. Model output never decides the score.
+5. On submission, Java validates answer IDs and indexes, computes the score against the reviewed answer key, and returns explanations/correct indexes. Model output never decides the score.
 6. Progress aggregates submission scores and per-topic accuracy and offers review suggestions for topics with multiple attempts and low accuracy.
 
 An unanswered question currently counts as incorrect in the topic denominator. That is a simple portfolio-demo metric, not a statistically rigorous mastery estimate.
@@ -212,7 +212,7 @@ It is **not yet an autonomous agent**. There is no planner loop, agent graph, au
 - **Vector similarity:** cosine distance ranks chunks by semantic closeness to a question, even when wording differs.
 - **Chunking:** splitting long documents into smaller passages. Overlap helps preserve context at boundaries.
 - **RAG:** retrieve relevant passages, place them in the prompt, generate an answer, and return the supporting passages.
-- **Structured output:** request a typed quiz object, map it to Java records, then validate it before persistence.
+- **Structured output:** request a typed quiz object, review it against source evidence, and validate the review before persistence.
 - **Prompt injection defense:** retrieved document content is treated as untrusted data in the instruction. This is a useful guardrail, not a complete security boundary.
 
 ### Provider portability
