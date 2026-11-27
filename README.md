@@ -44,9 +44,9 @@ The backend uses Spring AI and a project-owned `StudyAiProvider` interface. Open
 | Area | Technology |
 | --- | --- |
 | Frontend | React, TypeScript, Vite, CSS |
-| Backend | Java 21, Spring Boot, Spring Web, Spring JDBC |
+| Backend | Java 21, Spring Boot, Spring Web, Spring Data JPA, Spring JDBC |
 | AI | Spring AI, OpenRouter-compatible chat and embedding APIs |
-| Data | PostgreSQL, pgvector, Flyway |
+| Data | PostgreSQL, pgvector, Flyway; JPA for routine metadata persistence and JDBC for specialized SQL |
 | Document processing | Apache PDFBox, asynchronous Spring task executor |
 | Local services | Docker Compose |
 | Frontend checks | Vitest, Testing Library |
@@ -54,7 +54,7 @@ The backend uses Spring AI and a project-owned `StudyAiProvider` interface. Open
 
 ## Architecture
 
-The backend follows a small ports-and-adapters structure. Controllers handle HTTP and DTO mapping; application services coordinate use cases; domain models and repository interfaces describe core concepts; infrastructure adapters implement JDBC persistence, local file storage, document extraction, and model-provider calls.
+The backend follows a small ports-and-adapters structure. Controllers handle HTTP and DTO mapping; application services coordinate use cases; domain models and repository interfaces describe core concepts; infrastructure adapters implement JPA/JDBC persistence, local file storage, document extraction, and model-provider calls.
 
 ```text
 study-companion/
@@ -64,7 +64,7 @@ study-companion/
 │       ├── application/         # Services, ports, commands, app exceptions
 │       ├── config/              # Typed settings, CORS, async executor
 │       ├── domain/              # Domain records and repository interfaces
-│       └── infrastructure/      # JDBC, OpenRouter, local storage, PDFBox
+│       └── infrastructure/      # JPA/JDBC adapters, OpenRouter, local storage, PDFBox
 ├── frontend/                    # React application
 ├── docs/                        # Detailed developer and deployment guide
 ├── output/pdf/                  # PDF version of the developer guide
@@ -72,7 +72,7 @@ study-companion/
 └── .env.example                 # Configuration template (no credentials)
 ```
 
-Spring Boot auto-configures the `DataSource` and `JdbcTemplate` from `spring.datasource.*` settings. The app uses JDBC repositories rather than JPA, so domain records are not ORM entities. Flyway migrations define the schema.
+Spring Boot auto-configures a shared `DataSource` for Spring Data JPA and JDBC. Course and document metadata use JPA entities behind repository adapters; vector search and JSONB persistence remain in JDBC adapters. Domain records stay independent of ORM annotations. Flyway owns schema changes, and Hibernate validates mapped entities without generating schema changes.
 
 ## Run locally
 

@@ -101,14 +101,14 @@ flowchart TD
 - **Request and response DTOs** live in separate files under `api/dto`. They are transport shapes; they do not double as database entities or model output types.
 - **`ApiMapper`** converts domain results to response DTOs. This keeps HTTP serialization concerns out of application services.
 - **Application services** coordinate use cases and enforce rules such as upload limits, course ownership, quiz validation, scoring, and retrieval behavior.
-- **Domain models** are Java records such as `Course`, `StudyDocument`, `Quiz`, and `QuizQuestion`. This project uses JDBC rather than JPA, so these are domain models and not ORM-managed entities.
-- **Repository interfaces** under `domain/repository` describe required persistence operations. `infrastructure/persistence/jdbc` implements them with `JdbcTemplate` and keeps SQL out of application services.
+- **Domain models** are Java records such as `Course`, `StudyDocument`, `Quiz`, and `QuizQuestion`. They stay independent of persistence annotations.
+- **Repository interfaces** under `domain/repository` describe required persistence operations. Infrastructure adapters implement them and keep persistence details out of application services.
 - **Outbound ports and adapters:** application services depend on `StudyAiProvider`. The OpenRouter-specific Spring AI adapter lives under `infrastructure/ai/openai`; a Bedrock implementation can satisfy the same port.
 - **Configuration** is centralized: `AppProperties` binds the `app.*` settings, `AsyncConfiguration` controls document ingestion workers, and `WebConfig` configures CORS.
-- **Database connection:** Spring Boot auto-configures the `DataSource` and `JdbcTemplate` from `spring.datasource.*` in `application.yml`. This uses the framework’s standard connection-pool setup instead of constructing a connection for each repository.
+- **Database connection:** Spring Boot auto-configures one `DataSource` from `spring.datasource.*` in `application.yml`. JPA repositories and `JdbcTemplate` use that same source, so both approaches participate in Spring-managed database access.
 - **Schema evolution:** Flyway migration files own database changes. Repositories must match the schema; do not edit an already-applied migration when adding future changes.
 
-These are common enterprise patterns scaled to the size of this application: dependency inversion, repository abstraction, DTO mapping, constructor injection, immutable records, bounded asynchronous execution, and deterministic business rules. The project intentionally uses explicit JDBC because it has a small schema and pgvector queries; JPA is not required to achieve separation of concerns.
+These are common enterprise patterns scaled to the size of this application: dependency inversion, repository abstraction, DTO mapping, constructor injection, immutable records, bounded asynchronous execution, and deterministic business rules. Course and document metadata use JPA for routine persistence, while explicit JDBC remains for pgvector and JSONB operations where the SQL is clearer and more specialized.
 
 ### Important backend areas
 
@@ -118,14 +118,16 @@ These are common enterprise patterns scaled to the size of this application: dep
 - [`ApiMapper.java`](../backend/src/main/java/dev/studycompanion/api/mapper/ApiMapper.java): maps application/domain results to response DTOs.
 - [`Course.java`](../backend/src/main/java/dev/studycompanion/domain/model/Course.java), [`StudyDocument.java`](../backend/src/main/java/dev/studycompanion/domain/model/StudyDocument.java), and the other `domain/model` records: core data types independent of HTTP and JDBC.
 - [`CourseRepository.java`](../backend/src/main/java/dev/studycompanion/domain/repository/CourseRepository.java) and sibling interfaces: persistence contracts.
-- [`JdbcCourseRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jdbc/JdbcCourseRepository.java), [`JdbcDocumentChunkRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jdbc/JdbcDocumentChunkRepository.java), and sibling implementations: SQL, row mapping, pgvector formatting, and database writes.
+- [`JpaCourseRepositoryAdapter.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jpa/JpaCourseRepositoryAdapter.java) and [`JpaDocumentRepositoryAdapter.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jpa/JpaDocumentRepositoryAdapter.java): adapt Spring Data JPA persistence to the domain repository contracts.
+- [`CourseJpaRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jpa/repository/CourseJpaRepository.java) and [`DocumentJpaRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jpa/repository/DocumentJpaRepository.java): Spring Data repositories and a course-count projection.
+- [`JdbcDocumentChunkRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jdbc/JdbcDocumentChunkRepository.java), [`JdbcConversationRepository.java`](../backend/src/main/java/dev/studycompanion/infrastructure/persistence/jdbc/JdbcConversationRepository.java), and sibling adapters: explicit SQL, row mapping, pgvector formatting, and JSONB operations.
 - [`StudyAiProvider.java`](../backend/src/main/java/dev/studycompanion/application/port/StudyAiProvider.java): provider-neutral model interface.
 - [`OpenAiCompatibleStudyAiProvider.java`](../backend/src/main/java/dev/studycompanion/infrastructure/ai/openai/OpenAiCompatibleStudyAiProvider.java): Spring AI adapter for OpenRouter’s OpenAI-compatible APIs.
 - [`DocumentStorage.java`](../backend/src/main/java/dev/studycompanion/application/port/DocumentStorage.java) and [`LocalDocumentStorage.java`](../backend/src/main/java/dev/studycompanion/infrastructure/storage/LocalDocumentStorage.java): storage port and local filesystem adapter. `DocumentService` coordinates the upload use case without performing filesystem operations itself.
 - [`AppProperties.java`](../backend/src/main/java/dev/studycompanion/config/AppProperties.java), [`AsyncConfiguration.java`](../backend/src/main/java/dev/studycompanion/config/AsyncConfiguration.java), and [`WebConfig.java`](../backend/src/main/java/dev/studycompanion/config/WebConfig.java): typed settings, bounded worker pool, and CORS configuration.
 - [`DocumentTextExtractor.java`](../backend/src/main/java/dev/studycompanion/application/port/DocumentTextExtractor.java) and [`PdfAndTextDocumentExtractor.java`](../backend/src/main/java/dev/studycompanion/infrastructure/document/PdfAndTextDocumentExtractor.java): extraction port and PDFBox-backed implementation. [`TextChunker.java`](../backend/src/main/java/dev/studycompanion/application/service/TextChunker.java) handles splitting independently.
 
-There is no hand-written `DatabaseConfig` class. Spring Boot creates the connection pool, `DataSource`, and `JdbcTemplate` from `spring.datasource.*` in `application.yml`, then repositories receive `JdbcTemplate` through constructor injection. This follows Spring Boot’s standard configuration path and keeps database credentials and URLs outside Java code.
+There is no hand-written `DatabaseConfig` class. Spring Boot creates the connection pool and `DataSource` from `spring.datasource.*` in `application.yml`, then auto-configures JPA and `JdbcTemplate` against it. Flyway owns schema changes; Hibernate is set to validate the mapped entities without creating or altering tables. `open-in-view` is disabled so persistence access stays inside service/repository work rather than leaking into HTTP response rendering.
 
 ### REST API map
 
@@ -168,6 +170,10 @@ The initial Flyway migration is [`V1__initial_schema.sql`](../backend/src/main/r
 - `quiz_submissions`: saved answer indexes and deterministic score.
 
 An HNSW index uses pgvector’s cosine operator class. There are foreign keys and indexes for course/document and conversation/quiz lookups. The migration enables the `vector` extension before creating vector columns.
+
+### Persistence approach
+
+`Course` and `StudyDocument` remain domain records. Separate JPA entities in `infrastructure/persistence/jpa/entity` map to their tables, and adapter classes convert between those entities and the domain records. The course summary query uses a projection to compute document counts without loading every document. The chunk and quiz repositories continue using JDBC for vector similarity and JSONB. Conversation persistence also stays on JDBC because it stores and reads citation JSON. Both persistence approaches share the Spring-managed `DataSource`; Flyway remains the schema owner.
 
 ### Chat request flow
 
