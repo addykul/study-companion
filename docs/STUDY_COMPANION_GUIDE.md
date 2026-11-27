@@ -252,19 +252,27 @@ study-companion/
 
 The two apps are parts of one product and are being learned/deployed together. A single repo keeps API and UI changes synchronized, makes one portfolio project easy to clone, and lets one CI workflow run both test suites. Split them only if they acquire different owners, access permissions, release schedules, or become independently reusable services.
 
-When ready to publish:
+For ongoing development and publishing:
 
-1. Confirm `.env` is not staged; commit `.env.example`, never `.env` or any API key.
-2. Check `git status`, `.gitignore`, and the diff before the first commit. Uploaded files under `data/`, `target/`, `node_modules/`, and frontend build output should stay out of Git.
-3. Initialize Git in the project root, create a GitHub repository, add it as `origin`, and push the first branch.
-4. Add a CI workflow that installs frontend packages, runs `pnpm test` and `pnpm build`, then runs `mvn test` in Java 21.
-5. Store production secrets in AWS Secrets Manager or a CI secret store, not in GitHub source files.
-
-This workspace is not currently initialized as a Git repository. Waiting until you understand and review the project before publishing it is a good plan.
+1. Keep `.env` and API keys out of Git; commit `.env.example` instead.
+2. Review `git status`, `.gitignore`, and each diff before committing. Uploaded files under `data/`, `target/`, `node_modules/`, and frontend build output should stay out of Git.
+3. This project is already hosted in the `addykul/study-companion` GitHub repository. Push changes to `master` to use the frontend deployment workflow described below.
+4. Store production secrets in AWS Secrets Manager or GitHub Actions secrets, not in source files. The frontend workflow uses repository variables for non-secret deployment settings and OIDC for temporary AWS credentials.
 
 ## 8. How this could deploy on AWS
 
-The AWS plan below is a learning target; **AWS deployment is not implemented yet**.
+The frontend can be deployed automatically to S3 with the GitHub Actions workflow at [`.github/workflows/deploy-frontend.yml`](../.github/workflows/deploy-frontend.yml). It runs on pushes to `master` only when a file under `frontend/` changes. The backend and database AWS deployment in the architecture below are still learning targets; the workflow does not deploy them.
+
+To enable the frontend workflow, add these repository **Actions variables** in GitHub (`Settings` → `Secrets and variables` → `Actions` → `Variables`):
+
+| Variable | Value |
+| --- | --- |
+| `AWS_ROLE_ARN` | ARN of an IAM role configured to trust this repository's GitHub OIDC identity. |
+| `AWS_REGION` | AWS region used for the S3 bucket, such as `us-east-1`. |
+| `S3_BUCKET` | Name of the bucket that serves the frontend. |
+| `VITE_API_BASE_URL` | Public backend API base URL, including `/api`, such as `https://api.example.com/api`. |
+
+Configure AWS IAM's GitHub OIDC provider (`token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and scope the role trust to `repo:addykul/study-companion:ref:refs/heads/master`. Give the role `s3:ListBucket` on the frontend bucket and `s3:GetObject` / `s3:PutObject` on its objects. The workflow intentionally does not delete old or unrelated bucket objects. Confirm the bucket is configured for your existing website delivery setup, and allow the deployed frontend origin in the backend CORS configuration. The API URL is embedded into the Vite build at deployment time.
 
 ```mermaid
 flowchart LR
@@ -302,7 +310,7 @@ For this Spring app, a reasonable first AWS architecture is S3/CloudFront (or Am
 4. **Deploy the API container:** push to ECR, create an ECS Fargate task/service, add an ALB health check for `/api/health`, and configure `DB_URL`, provider profile, frontend origin, and upload storage.
 5. **Move the database:** use RDS PostgreSQL in private subnets, install/verify pgvector, apply Flyway migrations, and restrict inbound database traffic to the API’s security group.
 6. **Move files and secrets:** replace local filesystem persistence with S3; use Secrets Manager for OpenRouter. Configure IAM with least privilege.
-7. **Make it observable and repeatable:** add CloudWatch logs/metrics/alarms, domain and TLS certificate, then a GitHub Actions workflow using short-lived AWS role assumption (OIDC) to deploy.
+7. **Make it observable and repeatable:** add CloudWatch logs/metrics/alarms and a domain/TLS certificate. The frontend workflow already uses short-lived AWS role assumption (OIDC); extend CI/CD separately when the API is ready to deploy to AWS.
 8. **Budget and clean up:** learn what keeps billing (RDS instances, NAT gateways, load balancers, Fargate tasks, data transfer). Shut down or delete learning resources when not in use; check AWS pricing before creating resources.
 
 An alternative is to route `/api/*` through CloudFront to the API origin so the browser sees one site origin. Otherwise the production frontend and API have separate origins and the backend’s CORS allowlist must contain the exact production frontend origin.
