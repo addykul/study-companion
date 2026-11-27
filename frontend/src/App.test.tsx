@@ -33,6 +33,9 @@ describe('Study Companion journeys', () => {
     vi.mocked(api.courses).mockResolvedValue([])
     vi.mocked(api.documents).mockResolvedValue([])
     vi.mocked(api.chatHistory).mockResolvedValue({ conversationId: null, messages: [] })
+    vi.mocked(api.progress).mockResolvedValue({
+      quizzesTaken: 0, averageScorePercent: 0, topics: [], reviewSuggestions: [],
+    })
     vi.mocked(api.createCourse).mockResolvedValue(course)
     vi.mocked(api.upload).mockResolvedValue({
       id: 'doc-1', courseId: course.id, fileName: 'week-1.txt', contentType: 'text/plain',

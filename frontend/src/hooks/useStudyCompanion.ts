@@ -46,6 +46,7 @@ export function useStudyCompanion() {
   const selectedIdRef = useRef(selectedId)
   const documentRequestRef = useRef(0)
   const chatRequestRef = useRef(0)
+  const progressRequestRef = useRef(0)
   const quizRequestRef = useRef(0)
   selectedIdRef.current = selectedId
 
@@ -83,6 +84,20 @@ export function useStudyCompanion() {
     } catch (error) {
       if (selectedIdRef.current === courseId) {
         setPageError(errorMessage(error, 'Could not load documents.'))
+      }
+    }
+  }, [])
+
+  const loadProgress = useCallback(async (courseId: string) => {
+    const requestId = ++progressRequestRef.current
+    try {
+      const loaded = await api.progress(courseId)
+      if (requestId === progressRequestRef.current && selectedIdRef.current === courseId) {
+        setProgress(loaded)
+      }
+    } catch (error) {
+      if (requestId === progressRequestRef.current && selectedIdRef.current === courseId) {
+        setPageError(errorMessage(error, 'Could not load progress.'))
       }
     }
   }, [])
@@ -141,17 +156,8 @@ export function useStudyCompanion() {
   }, [selectedId, documents, loadDocuments])
 
   useEffect(() => {
-    if (!selectedId || tab !== 'progress') return
-    let active = true
-    api.progress(selectedId).then((result) => {
-      if (active && selectedIdRef.current === selectedId) setProgress(result)
-    }).catch((error: unknown) => {
-      if (active && selectedIdRef.current === selectedId) {
-        setPageError(errorMessage(error, 'Could not load progress.'))
-      }
-    })
-    return () => { active = false }
-  }, [selectedId, tab, submission])
+    if (selectedId) void loadProgress(selectedId)
+  }, [selectedId, loadProgress])
 
   const selectCourse = useCallback((courseId: string) => {
     setSelectedId(courseId)
@@ -257,7 +263,10 @@ export function useStudyCompanion() {
     setQuizError('')
     try {
       const result = await api.submitQuiz(quizId, answers)
-      if (quizRequestRef.current === requestId) setSubmission(result)
+      if (quizRequestRef.current === requestId) {
+        setSubmission(result)
+        void loadProgress(quiz.courseId)
+      }
     } catch (error) {
       if (quizRequestRef.current === requestId) setQuizError(errorMessage(error, 'Could not submit answers.'))
     } finally {
