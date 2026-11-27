@@ -787,8 +787,45 @@ textarea:focus-visible {
   padding-left: 8px;
   list-style: none;
 }
-.source-list {
+.source-disclosure {
   margin-top: 11px;
+}
+.source-toggle {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b806f;
+  background: #f2f7f2;
+  border: 1px solid #e4ede4;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+  list-style: none;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.source-toggle::-webkit-details-marker {
+  display: none;
+}
+.source-toggle:hover {
+  background: #eaf3eb;
+  border-color: #b6cbb8;
+}
+.source-toggle:focus-visible {
+  outline: 2px solid #78977e;
+  outline-offset: 2px;
+}
+.source-toggle-chevron {
+  transition: transform 140ms ease;
+}
+.source-disclosure[open] .source-toggle-chevron {
+  transform: rotate(180deg);
+}
+.source-list {
+  margin-top: 9px;
   display: grid;
   justify-items: start;
   gap: 6px;

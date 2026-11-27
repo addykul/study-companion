@@ -54,7 +54,8 @@ public class JdbcConversationRepository implements ConversationRepository {
                 FROM messages message
                 JOIN conversations conversation ON conversation.id = message.conversation_id
                 WHERE conversation.course_id = ?
-                ORDER BY conversation.created_at, message.created_at, message.id
+                ORDER BY conversation.created_at, message.created_at,
+                         CASE message.role WHEN 'USER' THEN 0 ELSE 1 END, message.id
                 """, this::mapMessage, courseId);
         return new ConversationHistory(conversationId, messages);
     }
@@ -64,9 +65,12 @@ public class JdbcConversationRepository implements ConversationRepository {
         return jdbcTemplate.query("""
                 SELECT role, content FROM (
                     SELECT role, content, created_at, id FROM messages WHERE conversation_id = ?
-                    ORDER BY created_at DESC, id DESC LIMIT ?
+                    ORDER BY created_at DESC,
+                             CASE role WHEN 'ASSISTANT' THEN 0 ELSE 1 END, id DESC
+                    LIMIT ?
                 ) recent_messages
-                ORDER BY created_at ASC, id ASC
+                ORDER BY created_at ASC,
+                         CASE role WHEN 'USER' THEN 0 ELSE 1 END, id ASC
                 """, (rs, rowNum) -> new ConversationTurn(rs.getString("role"), rs.getString("content")),
                 conversationId, limit);
     }

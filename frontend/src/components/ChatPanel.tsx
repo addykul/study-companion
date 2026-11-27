@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowRight,
   BookOpen,
+  ChevronDown,
   FileText,
   LoaderCircle,
   MessageSquare,
@@ -123,25 +124,30 @@ export function ChatPanel(props: ChatPanelProps) {
                     </Markdown>
                   </div>
                   {!!entry.sources?.length && (
-                    <div className="source-list">
-                      <div className="source-caption">
-                        SOURCES FROM YOUR NOTES
+                    <details className="source-disclosure">
+                      <summary className="source-toggle">
+                        <FileText size={13} />
+                        <span>Sources · {entry.sources.length}</span>
+                        <ChevronDown className="source-toggle-chevron" size={13} />
+                      </summary>
+                      <div className="source-list">
+                        <div className="source-caption">SOURCES FROM YOUR NOTES</div>
+                        {entry.sources.map((source, index) => (
+                          <button
+                            className="source-chip"
+                            key={`${source.documentId}-${index}`}
+                            onClick={() => onSelectSource(source)}
+                          >
+                            <FileText size={13} />
+                            <span>
+                              {source.documentName}
+                              {source.page ? ` · p. ${source.page}` : ""}
+                            </span>
+                            <ArrowRight size={12} />
+                          </button>
+                        ))}
                       </div>
-                      {entry.sources.map((source, index) => (
-                        <button
-                          className="source-chip"
-                          key={`${source.documentId}-${index}`}
-                          onClick={() => onSelectSource(source)}
-                        >
-                          <FileText size={13} />
-                          <span>
-                            {source.documentName}
-                            {source.page ? ` · p. ${source.page}` : ""}
-                          </span>
-                          <ArrowRight size={12} />
-                        </button>
-                      ))}
-                    </div>
+                    </details>
                   )}
                 </div>
               </div>
